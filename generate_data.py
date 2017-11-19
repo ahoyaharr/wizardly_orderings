@@ -1,5 +1,5 @@
 import random
-import os
+import wizard_parse as wp
 
 
 def generate_data(w_count, c_count):
@@ -23,7 +23,7 @@ def make_files(file_count, wizard_count):
     d = generate_data(wizard_count, 500)
     lines = write_file(d[0], d[1])
     for i in range(file_count):
-        with open(str(wizard_count) + '\\' + "{}_{}".format(wizard_count, i), "w") as f:
+        with open(str(wizard_count) + wp.separator() + "{}_{}".format(wizard_count, i), "w") as f:
             f.write(lines[0])
             f.write('\n')
             f.write(lines[1])

@@ -20,6 +20,6 @@ def greedy_find(wizards, constraints):
     order = [wizards[0]]
     for wizard in wizards[1:]:
         order = add_wizard(wizard)
-    if evaluate_ordering(order) == 2:
-        print(order)
+    #if evaluate_ordering(order) == 2:
+    #    print(order)
     return order, evaluate_ordering(order)
