@@ -103,14 +103,24 @@ class CNF:
                     return False
         return True
 
-    def find_assignment(self):
+    def find_assignment(self, next_clause=None):
         """
-        Performs an exhausive, branching search to find a valid assignment by populating relationship data.
+        Performs an exhaustive, branching search to find a valid assignment by populating relationship data.
         :return: True if a valid assignment is found, otherwise False.
         """
-        next_clause = self.next_unsatisfied_clause()
+        if not self.validate_relationships():
+            return False
         if next_clause is 'finished' and self.validate_relationships():
             return True
+
+        next_clause.satisfy_clause(True, self.relationships)
+
+        result = self.find_assignment(self.next_unsatisfied_clause())
+        if not result:
+            next_clause.dissatisfy_clause(self.relationships)
+            next_clause.satisfy_clause(False, self.relationships)
+        
+
 
     def create_ordering(self):
         """
