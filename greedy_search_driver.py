@@ -10,8 +10,8 @@ def fname(s):
 f = [fname('3'), fname('5'), fname('7'), fname('9'), fname('4')]
 
 for dir in dirs:
-    for file in f:
-    #for file in wizard_parse.get_files(dir):
+    #for file in f:
+    for file in wizard_parse.get_files(dir):
         w, c = wizard_parse.parse_partial(dir, file)
 
         number_to_wizard = {i: w[i] for i in range(len(w))}
@@ -23,10 +23,11 @@ for dir in dirs:
                 wizard_to_number[constraint.split()[2]]]
                for constraint in c]
 
+        constraint_flexibility = 0.1 * len(c)
         c = 0
         best, errors = '', 999
         print('searching for solution to', file)
-        while errors != 0:
+        while errors >= constraint_flexibility:
             c += 1
             shuffle(w_m)
             a, b = greedy_solver.greedy_find(w_m, c_m)
