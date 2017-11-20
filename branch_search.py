@@ -23,9 +23,45 @@ class Variable:
 
 class Clause:
     def __init__(self, lt, gt):
+        """
+        A clause has two variables.
+        :param lt: w_3
+        :param gt:
+        """
         self.satisfied = False
         self.lt = lt
         self.gt = gt
+
+    def is_satisfied(self):
+        return bool(self.satisfied)
+
+    def satisfy_clause(self, lt, relationship):
+        """
+        Satisfies a clause by satisfying one variable in a clause. A clause which has already been
+        satisfied may not be satisfied (doing so would cause a contradiction).
+        :param lt: True the clause is satisfied by assigning TRUE to the lt variable, and False otherwise.
+        :param relationship: the relationship dictionary to update.
+        :return: updated relationship data.
+        """
+        assert self.is_satisfied() is False
+        v = self.lt if lt else self.gt
+
+        if v.less_than:
+            pass
+        else: # greater_than case
+            pass
+
+        self.satisfied = 'less_than' if v.less_than is True else 'greater_than'
+        return relationship
+
+    def desatisfy_clause(self, relationship):
+        """
+        Desatisfies a clause, and reverts changes to the relationship data.
+        :param relationship: the relationship data
+        :return: the reverted relationship data
+        """
+        assert self.is_satisfied() is True
+        self.satisfied = False
 
     @staticmethod
     def construct_pair(c1, c2, c3):
