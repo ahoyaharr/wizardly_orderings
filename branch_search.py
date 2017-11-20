@@ -45,23 +45,29 @@ class Clause:
         """
         assert self.is_satisfied() is False
         v = self.lt if lt else self.gt
-
         if v.less_than:
-            pass
+            relationship[v.target].update([v.context1, v.context2])
         else: # greater_than case
-            pass
-
+            relationship[v.context1].add(v.target)
+            relationship[v.context2].add(v.target)
         self.satisfied = 'less_than' if v.less_than is True else 'greater_than'
         return relationship
 
-    def desatisfy_clause(self, relationship):
+    def dissatisfy_clause(self, relationship):
         """
-        Desatisfies a clause, and reverts changes to the relationship data.
+        dissatisfy a clause, and reverts changes to the relationship data.
         :param relationship: the relationship data
         :return: the reverted relationship data
         """
         assert self.is_satisfied() is True
+        if self.satisfied is 'less_than':
+            relationship[self.lt.target].remove(self.lt.context1)
+            relationship[self.lt.target].remove(self.lt.context2)
+        else: # 'greater_than' case
+            relationship[self.gt.context1].remove(self.gt.target)
+            relationship[self.gt.context2].remove(self.gt.target)
         self.satisfied = False
+        return relationship
 
     @staticmethod
     def construct_pair(c1, c2, c3):
@@ -77,6 +83,12 @@ class CNF:
     def __init__(self, party):
         self.clauses = [Clause.construct_pair(*constraint.split()) for constraint in party.constraints]
         self.relationships = {wizard: set() for wizard in party.wizards}
+
+    def next_unsatisfied_clause(self):
+        for clause in self.clauses:
+            if not clause.is_satisfied():
+                return clause
+        return 'finished'
 
     def validate_relationships(self):
         """
@@ -96,10 +108,9 @@ class CNF:
         Performs an exhausive, branching search to find a valid assignment by populating relationship data.
         :return: True if a valid assignment is found, otherwise False.
         """
-        if not self.validate_relationships():
-            return False
-
-        return False
+        next_clause = self.next_unsatisfied_clause()
+        if next_clause is 'finished' and self.validate_relationships():
+            return True
 
     def create_ordering(self):
         """
