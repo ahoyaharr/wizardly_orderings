@@ -1,4 +1,7 @@
 import wizard_parse
+import graph_tool.all as gt
+import graph_tool.topology as topo
+import collections
 
 dir = 'inputs20'
 file = 'input20_0.in'
@@ -12,13 +15,14 @@ class Party:
 
 
 class Variable:
-    def __init__(self, context1, context2, target, less_than):
+    def __init__(self, context1, context2, target, less_than, clause=None):
         # Arguments come in the form of a constraint: {w_1, w_2, w_3}.
         assert less_than is True or less_than is False
         self.target = target
         self.context1 = context1
         self.context2 = context2
         self.less_than = less_than  # True => target < context1, target < context2
+        self.clause = clause
 
 
 class Clause:
@@ -31,11 +35,19 @@ class Clause:
         self.satisfied = False
         self.lt = lt
         self.gt = gt
+        self.lt.clause = self  # Each variable gets a reference to the clause of
+        self.gt.clause = self  # which it is a member
+
+    def __repr__(self):
+        return str(self.satisfied) + ', ' + str(self.lt.context1) + ', ' + str(self.lt.context2) + ', ' + str(self.lt.target)
 
     def is_satisfied(self):
         return bool(self.satisfied)
 
-    def satisfy_clause(self, lt, relationship):
+    def get_vars(self):
+        return (self.lt, self.gt)
+
+    def satisfy_clause(self, lt, relationship, mapping):
         """
         Satisfies a clause by satisfying one variable in a clause. A clause which has already been
         satisfied may not be satisfied (doing so would cause a contradiction).
@@ -46,14 +58,15 @@ class Clause:
         assert self.is_satisfied() is False
         v = self.lt if lt else self.gt
         if v.less_than:
-            relationship[v.target].update([v.context1, v.context2])
+            relationship.add_edge(mapping[v.target], mapping[v.context1])
+            relationship.add_edge(mapping[v.target], mapping[v.context2])
         else: # greater_than case
-            relationship[v.context1].add(v.target)
-            relationship[v.context2].add(v.target)
+            relationship.add_edge(mapping[v.context1], mapping[v.target])
+            relationship.add_edge(mapping[v.context2], mapping[v.target])
         self.satisfied = 'less_than' if v.less_than is True else 'greater_than'
         return relationship
 
-    def dissatisfy_clause(self, relationship):
+    def dissatisfy_clause(self, relationship, mapping):
         """
         dissatisfy a clause, and reverts changes to the relationship data.
         :param relationship: the relationship data
@@ -61,11 +74,11 @@ class Clause:
         """
         assert self.is_satisfied() is True
         if self.satisfied is 'less_than':
-            relationship[self.lt.target].remove(self.lt.context1)
-            relationship[self.lt.target].remove(self.lt.context2)
-        else: # 'greater_than' case
-            relationship[self.gt.context1].remove(self.gt.target)
-            relationship[self.gt.context2].remove(self.gt.target)
+            relationship.remove_edge(relationship.edge(mapping[self.lt.target], mapping[self.lt.context1]))
+            relationship.remove_edge(relationship.edge(mapping[self.lt.target], mapping[self.lt.context2]))
+        else: # greater_than case
+            relationship.remove_edge(relationship.edge(mapping[self.gt.context1], mapping[self.gt.target]))
+            relationship.remove_edge(relationship.edge(mapping[self.gt.context2], mapping[self.gt.target]))
         self.satisfied = False
         return relationship
 
@@ -81,45 +94,54 @@ class Clause:
 
 class CNF:
     def __init__(self, party):
+        """
+        :clauses: A list of each clause which must be satisfied. Clauses are pairs of variables.
+        :relationships: A directed graph graph representating the relative age of wizards, where 
+        each wizard is a node and an edge UV means that wizard U is younger than wizard V.
+        :wizard_map: Mapping between the name of a wizard and the index of it's vertex
+        """
         self.clauses = [Clause.construct_pair(*constraint.split()) for constraint in party.constraints]
-        self.relationships = {wizard: set() for wizard in party.wizards}
+        self.relationships = gt.Graph()
+        self.relationships.add_vertex(party.wizard_count) # Each wizard is a vertex
+        self.wizard_map = {party.wizards[i]: i for i in range(party.wizard_count)}
+        self.vertex_name = self.relationships.new_vertex_property('string')
+        for i in range(party.wizard_count):
+            self.vertex_name[i] = party.wizards[i]
 
     def next_unsatisfied_clause(self):
+        """
+        return: the next unsatisfied clause
+        """
         for clause in self.clauses:
             if not clause.is_satisfied():
                 return clause
-        return 'finished'
+        return 'satisfied'
 
-    def validate_relationships(self):
+    def is_valid_relationship(self):
         """
-        If i is a member of the set associated with k, and k is a member of the list associated with i,
-        then there is a contradiction and there must have been a mistake.
-        :return: True if there is no contradiction, otherwise False.
+        If there is a cycle in relationships, then there is a contradiction. 
         """
-        for wizard in self.relationships:
-            associations = self.relationships[wizard]
-            for associate in associations:
-                if wizard in self.relationships[associate]:
-                    return False
-        return True
+        return topo.is_DAG(self.relationships)
 
-    def find_assignment(self, next_clause=None):
+    def find_assignment(self):
         """
-        Performs an exhaustive, branching search to find a valid assignment by populating relationship data.
+        Performs an exhaustive, iterative, branching search for a valid assignment.
         :return: True if a valid assignment is found, otherwise False.
         """
-        if not self.validate_relationships():
-            return False
-        if next_clause is 'finished' and self.validate_relationships():
-            return True
+        next_assignment = collections.deque()
+        next_assignment.extend(self.next_unsatisfied_clause().get_vars())
 
-        next_clause.satisfy_clause(True, self.relationships)
+        while self.next_unsatisfied_clause() is not 'satisfied' and len(next_assignment) > 1:
+            variable = next_assignment.pop()  # Current is a variable which will be assigned TRUE
+            variable.clause.satisfy_clause(variable.less_than, self.relationships, self.wizard_map)
+            print(variable.clause)
+            if not self.is_valid_relationship():
+                variable.clause.dissatisfy_clause(self.relationships, self.wizard_map)
+            else:
+                next_assignment.extend(self.next_unsatisfied_clause().get_vars())
 
-        result = self.find_assignment(self.next_unsatisfied_clause())
-        if not result:
-            next_clause.dissatisfy_clause(self.relationships)
-            next_clause.satisfy_clause(False, self.relationships)
-        
+        return True if self.next_unsatisfied_clause() is 'satisfied' else False
+
 
 
     def create_ordering(self):
@@ -127,11 +149,11 @@ class CNF:
         Constructs a valid ordering using relationship data from a valid assignment.
         :return: A valid ordering, or False if a valid ordering does not exist.
         """
-        if not self.find_assignment():
-            return False
-        ordering = list()
-        return ordering
+        return [self.vertex_name[vertex] for vertex in topo.topological_sort(self.relationships)]
+
 
 
 p = Party(dir, file)
 c = CNF(p)
+gv = gt.GraphView(c.relationships)
+c.find_assignment()

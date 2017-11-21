@@ -4,7 +4,7 @@ import sys
 WINDOWS_ENCODING = '\\'
 UNIX_ENCODING = '/'
 
-SYSTEM_TYPE = 'windows'
+SYSTEM_TYPE = 'unix'
 
 
 def parse_complete(d, s):
