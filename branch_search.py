@@ -112,7 +112,6 @@ class CNF:
         self.relationships.add_vertex(party.wizard_count) # Each wizard is a vertex
         self.wizard_map = {party.wizards[i]: i for i in range(party.wizard_count)}
         self.vertex_name = self.relationships.new_vertex_property('string')
-        self.count = 0
         for i in range(party.wizard_count):
             self.vertex_name[i] = party.wizards[i]
 
@@ -145,9 +144,6 @@ class CNF:
 
 
     def find_assignment(self, clause):
-        self.count += 1
-        if self.count % 100000 == 0:
-            print(self.count, ':', len([c for c in self.clauses if c.is_satisfied()]))
         if clause == 0 and self.is_valid_relationship():
             return True
         if not self.is_valid_relationship():
