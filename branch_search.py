@@ -56,6 +56,9 @@ class Clause:
         :return: updated relationship data.
         """
         assert self.is_satisfied() is False
+        #if self.is_satisfied():
+        #    self.dissatisfy_clause(relationship, mapping)
+
         v = self.lt if lt else self.gt
         if v.less_than:
             relationship.add_edge(mapping[v.target], mapping[v.context1])
@@ -64,7 +67,7 @@ class Clause:
             relationship.add_edge(mapping[v.context1], mapping[v.target])
             relationship.add_edge(mapping[v.context2], mapping[v.target])
         self.satisfied = 'less_than' if v.less_than is True else 'greater_than'
-        return relationship
+        return self.satisfied
 
     def dissatisfy_clause(self, relationship, mapping):
         """
@@ -80,7 +83,7 @@ class Clause:
             relationship.remove_edge(relationship.edge(mapping[self.gt.context1], mapping[self.gt.target]))
             relationship.remove_edge(relationship.edge(mapping[self.gt.context2], mapping[self.gt.target]))
         self.satisfied = False
-        return relationship
+        return self.satisfied
 
     @staticmethod
     def construct_pair(c1, c2, c3):
@@ -123,25 +126,31 @@ class CNF:
         """
         return topo.is_DAG(self.relationships)
 
-    def find_assignment(self):
-        """
-        Performs an exhaustive, iterative, branching search for a valid assignment.
-        :return: True if a valid assignment is found, otherwise False.
-        """
-        next_assignment = collections.deque()
-        next_assignment.extend(self.next_unsatisfied_clause().get_vars())
 
-        while self.next_unsatisfied_clause() is not 'satisfied' and len(next_assignment) > 1:
-            variable = next_assignment.pop()  # Current is a variable which will be assigned TRUE
-            variable.clause.satisfy_clause(variable.less_than, self.relationships, self.wizard_map)
-            print(variable.clause)
-            if not self.is_valid_relationship():
-                variable.clause.dissatisfy_clause(self.relationships, self.wizard_map)
-            else:
-                next_assignment.extend(self.next_unsatisfied_clause().get_vars())
+    def find_assignment(self, clause):
+        if clause == 0 and self.is_valid_relationship():
+            return True
+        if not self.is_valid_relationship():
+            # Revert the changes to the graph caused by the previous find_assignment
+            return False
 
-        return True if self.next_unsatisfied_clause() is 'satisfied' else False
+        # Get the current clause
+        c = self.clauses[clause - 1]
 
+        # Try satisfying the LT variable
+        c.satisfy_clause(True, self.relationships, self.wizard_map)
+        if self.find_assignment(clause - 1):
+            return True
+        # LT must have failed; revert changes to graph
+        c.dissatisfy_clause(self.relationships, self.wizard_map)
+        # Try satisfying the GT variable
+        c.satisfy_clause(False, self.relationships, self.wizard_map)
+        r = self.find_assignment(clause - 1)
+        if not r:
+            # Revert changes if GT failed
+            c.dissatisfy_clause(self.relationships, self.wizard_map)
+        # Propagate result   
+        return r                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
 
 
     def create_ordering(self):
@@ -149,11 +158,12 @@ class CNF:
         Constructs a valid ordering using relationship data from a valid assignment.
         :return: A valid ordering, or False if a valid ordering does not exist.
         """
-        return [self.vertex_name[vertex] for vertex in topo.topological_sort(self.relationships)]
+        return ' '.join([self.vertex_name[vertex] for vertex in topo.topological_sort(self.relationships)])
 
 
 
 p = Party(dir, file)
 c = CNF(p)
 gv = gt.GraphView(c.relationships)
-c.find_assignment()
+print(c.find_assignment(len(c.clauses)))
+print(c.create_ordering())

@@ -20,7 +20,7 @@ def parse_partial(d, s):
     total = file.read().splitlines()
     wizards = set()
     wizard_count = int(total[0])
-    constraints = total[3:]
+    constraints = total[2:]
     for constraint in constraints:
         for wizard in constraint.split():
             if wizard not in wizards:
