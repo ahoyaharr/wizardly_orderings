@@ -2,9 +2,11 @@ import wizard_parse
 import graph_tool.all as gt
 import graph_tool.topology as topo
 import collections
+import time
+import random
 
-dir = 'inputs20'
-file = 'input20_0.in'
+dir = 'inputs35'
+file = 'input35_0.in'
 
 
 class Party:
@@ -104,6 +106,7 @@ class CNF:
         :wizard_map: Mapping between the name of a wizard and the index of it's vertex
         """
         self.clauses = [Clause.construct_pair(*constraint.split()) for constraint in party.constraints]
+        random.shuffle(self.clauses)
         self.relationships = gt.Graph()
         self.relationships.add_vertex(party.wizard_count) # Each wizard is a vertex
         self.wizard_map = {party.wizards[i]: i for i in range(party.wizard_count)}
@@ -161,9 +164,14 @@ class CNF:
         return ' '.join([self.vertex_name[vertex] for vertex in topo.topological_sort(self.relationships)])
 
 
+def time_fn(fn, args):
+    start = time.time()
+    fn(*args)
+    print('time taken: %s' % (time.time() - start))
 
 p = Party(dir, file)
 c = CNF(p)
 gv = gt.GraphView(c.relationships)
-print(c.find_assignment(len(c.clauses)))
+#print(c.find_assignment(len(c.clauses)))
+time_fn(c.find_assignment, [len(c.clauses)])
 print(c.create_ordering())
