@@ -6,10 +6,6 @@ import time
 import random
 from itertools import chain
 
-dir = 'Staff_Inputs'
-file = 'staff_60.in'
-
-
 class Party:
     def __init__(self, dir, file):
         self.wizards, self.constraints = wizard_parse.parse_partial(dir, file)  # Wizards and constraints
@@ -181,10 +177,3 @@ def time_fn(fn, args):
     start = time.time()
     fn(*args)
     print('time taken: %s' % (time.time() - start))
-
-p = Party(dir, file)
-c = CNF(p)
-gv = gt.GraphView(c.relationships)
-#print(c.find_assignment(len(c.clauses)))
-time_fn(c.find_assignment, [len(c.clauses)])
-print(c.create_ordering())
