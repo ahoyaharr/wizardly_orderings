@@ -4,9 +4,10 @@ import graph_tool.topology as topo
 import collections
 import time
 import random
+from itertools import chain
 
-dir = 'inputs35'
-file = 'input35_0.in'
+dir = 'inputs50'
+file = 'input50_0.in'
 
 
 class Party:
@@ -106,13 +107,31 @@ class CNF:
         :wizard_map: Mapping between the name of a wizard and the index of it's vertex
         """
         self.clauses = [Clause.construct_pair(*constraint.split()) for constraint in party.constraints]
-        random.shuffle(self.clauses)
+        self.order_clauses()
         self.relationships = gt.Graph()
         self.relationships.add_vertex(party.wizard_count) # Each wizard is a vertex
         self.wizard_map = {party.wizards[i]: i for i in range(party.wizard_count)}
         self.vertex_name = self.relationships.new_vertex_property('string')
+        self.count = 0
         for i in range(party.wizard_count):
             self.vertex_name[i] = party.wizards[i]
+
+    def order_clauses(self):
+        clause_data = [[c.lt.target, c.lt.context1, c.lt.context2] for c in self.clauses]
+        unpacked_clauses = list(chain.from_iterable(clause_data))
+        wizards = list(set(unpacked_clauses))
+        wizard_frequency = {wizard: unpacked_clauses.count(wizard) for wizard in wizards}
+        wizards.sort(key=lambda wizard: -1 * wizard_frequency[wizard])
+        new_ordering = []
+        for wizard in wizards:
+            #print('handling', wizard)
+            indices = [i for i in range(len(clause_data))[::-1] if wizard in clause_data[i]]
+            new_ordering.extend([self.clauses[i] for i in indices])
+            self.clauses = [self.clauses[i] for i in range(len(self.clauses)) if i not in indices]
+            clause_data = [[c.lt.target, c.lt.context1, c.lt.context2] for c in self.clauses]
+        self.clauses = new_ordering
+        return wizards
+
 
     def next_unsatisfied_clause(self):
         """
@@ -131,6 +150,9 @@ class CNF:
 
 
     def find_assignment(self, clause):
+        self.count += 1
+        if self.count % 100000 == 0:
+            print(self.count, ':', len([c for c in self.clauses if c.is_satisfied()]))
         if clause == 0 and self.is_valid_relationship():
             return True
         if not self.is_valid_relationship():
