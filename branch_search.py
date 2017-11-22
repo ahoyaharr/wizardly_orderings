@@ -6,8 +6,8 @@ import time
 import random
 from itertools import chain
 
-dir = 'inputs50'
-file = 'input50_0.in'
+dir = 'Staff_Inputs'
+file = 'staff_60.in'
 
 
 class Party:
@@ -122,14 +122,9 @@ class CNF:
         wizards = list(set(unpacked_clauses))
         wizard_frequency = {wizard: unpacked_clauses.count(wizard) for wizard in wizards}
         wizards.sort(key=lambda wizard: -1 * wizard_frequency[wizard])
-        new_ordering = []
-        for wizard in wizards:
-            #print('handling', wizard)
-            indices = [i for i in range(len(clause_data))[::-1] if wizard in clause_data[i]]
-            new_ordering.extend([self.clauses[i] for i in indices])
-            self.clauses = [self.clauses[i] for i in range(len(self.clauses)) if i not in indices]
-            clause_data = [[c.lt.target, c.lt.context1, c.lt.context2] for c in self.clauses]
-        self.clauses = new_ordering
+        wizard_frequency = {wizards[i]: pow(2, i) for i in range(len(wizards))}
+        self.clauses.sort(key=lambda c: -1 * \
+            (wizard_frequency[c.lt.context1] + wizard_frequency[c.lt.context2] + wizard_frequency[c.lt.target]))
         return wizards
 
 
