@@ -176,4 +176,6 @@ class CNF:
 def time_fn(fn, args):
     start = time.time()
     fn(*args)
-    print('time taken: %s' % (time.time() - start))
+    t = (time.time() - start)
+    print('time taken: %s' % t)
+    return int(t) 
