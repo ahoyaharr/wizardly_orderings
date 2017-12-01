@@ -106,17 +106,30 @@ class TwoSAT:
         # for each variable x_i in the 2-SAT instance, xi and ~xi are vertices.
         # xi and ~xi are complements of each other.
         self.g.add_vertex(party.constraint_count * 4)
+
         # maps the vertex representing a variable to the vertex representing the complement of that variable
-        self.vertex_complement = {}
+        self.vertex_complement = dictionary()
+
         # clause_mapping takes a clause, and returns a tuple containing the vertices which
         # represent the variables (x_i, ~x_i, x_i+1, ~x_i+1).
+
         self.clause_mapping = {clause:self.clause_to_vertices(clause) for clause in self.clauses}
+        # map each vertex to the variable which it represents. assignments happen in clause_to_verticies.
+        self.vertex_to_variable = dictionary()
+
+        # map each vertex to it's assignment, either True or False
+        self.vertex_assignment = dictionary()
+
+        # find a satisfying assignment
+        self.satisfy()
 
     def clause_to_vertices(self, clause):
         """
         Returns the two vertices which represent v_i, v_i+1 of a given clause.
         """
         assert clause in self.clauses
+        clause.lt.clause = clause
+        clause.gt.clause = clause
         index = 4 * (self.clauses.index(clause) + 1)
         v = list(self.g.vertices())
         variables = tuple(v[i] for i in range(index - 4, index))
@@ -124,6 +137,8 @@ class TwoSAT:
         self.vertex_complement[variables[1]] = variables[0]
         self.vertex_complement[variables[2]] = variables[3]
         self.vertex_complement[variables[3]] = variables[2]
+        self.vertex_assignment[variables[0]] = clause.lt
+        self.vertex_assignment[variables[2]] = clause.gt
         return variables
 
 
@@ -134,10 +149,12 @@ class TwoSAT:
         """
         # for each clause in the form (u OR v),
         # add the edges (~u -> v) and (~v -> u) to G
+        # 1 constraint => (x_1 or ~x_2)(~x_1 or x_2)(x_1 or x_2)
         for clause in self.clauses:
             u_t, u_f, v_t, v_f = self.clause_mapping[clause]
             self.g.add_edge(u_f, v_t)
             self.g.add_edge(v_f, u_t)
+            self.g.add_edge(u_t, )
 
         # find the reverse topological order
         reverse_topological_order = topo.topological_sort(self.g)[::-1]
