@@ -1,9 +1,7 @@
 import wizard_parse
 import graph_tool.all as gt
 import graph_tool.topology as topo
-import collections
 import time
-import random
 from itertools import chain
 
 class Party:
@@ -111,7 +109,7 @@ class CNF:
         for i in range(party.wizard_count):
             self.vertex_name[i] = party.wizards[i]
 
-    """
+
     def order_clauses(self):
         clause_data = [[c.lt.target, c.lt.context1, c.lt.context2] for c in self.clauses]
         unpacked_clauses = list(chain.from_iterable(clause_data))
@@ -122,20 +120,7 @@ class CNF:
         self.clauses.sort(key=lambda c: -1 * \
             (wizard_frequency[c.lt.context1] + wizard_frequency[c.lt.context2] + wizard_frequency[c.lt.target]))
         return wizards
-    """
-    #"""
-    def order_clauses(self):
-        clause_data = [[c.lt.target, c.lt.context1, c.lt.context2] for c in self.clauses]
-        unpacked_clauses = [c[0] for c in clause_data] + list(chain.from_iterable(clause_data))
-        wizards = list(set(unpacked_clauses))
-        wizard_frequency = {wizard: unpacked_clauses.count(wizard) for wizard in wizards}
-        wizards.sort(key=lambda wizard: -1 * wizard_frequency[wizard])
-        wizard_frequency = {wizards[i]: pow(2, i) for i in range(len(wizards))}
-        self.clauses.sort(key=lambda c: -1 * \
-            (wizard_frequency[c.lt.context1] * 0.8 + wizard_frequency[c.lt.context2] * 0.8 + wizard_frequency[c.lt.target]))
-        return wizards
-    #"""
-
+    
 
     def next_unsatisfied_clause(self):
         """
